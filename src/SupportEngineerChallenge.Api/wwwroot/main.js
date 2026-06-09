@@ -1,5 +1,5 @@
 const state = {
-  tasks: []
+  tasks: [],
 };
 
 const userSelect = document.getElementById("userSelect");
@@ -28,14 +28,26 @@ function render() {
 }
 
 function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m]));
+  return String(str).replace(
+    /[&<>"']/g,
+    (m) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      })[m],
+  );
 }
 
 async function refresh() {
   setError("");
   const userId = userSelect.value;
 
-  const res = await fetch(`/api/tasks?userId=${encodeURIComponent(userId)}&limit=50`);
+  const res = await fetch(
+    `/api/tasks?userId=${encodeURIComponent(userId)}&limit=50`,
+  );
   if (!res.ok) {
     setError(`Refresh failed: ${res.status} ${res.statusText}`);
     return;
@@ -43,8 +55,9 @@ async function refresh() {
 
   const items = await res.json();
 
-  state.tasks = items
-    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  state.tasks = items.sort((a, b) =>
+    String(a.createdAt).localeCompare(String(b.createdAt)),
+  );
 
   render();
 }
@@ -56,19 +69,14 @@ async function addTask() {
 
   const body = { userId, title };
 
-  const includeHeader = Math.random() > 0.35;
-
-  const headers = { "Content-Type": "application/json" };
-  if (includeHeader) {
-    headers["X-Client-Timestamp"] = new Date().toISOString();
-  } else {
-    headers["X-Client-Timestamp"] = "";
-  }
-
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Client-Timestamp": new Date().toISOString(),
+  };
   const res = await fetch("/api/tasks", {
     method: "POST",
     headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -83,6 +91,9 @@ async function addTask() {
 
 addBtn.addEventListener("click", addTask);
 refreshBtn.addEventListener("click", refresh);
-userSelect.addEventListener("change", () => { state.tasks = []; refresh(); });
+userSelect.addEventListener("change", () => {
+  state.tasks = [];
+  refresh();
+});
 
 refresh();

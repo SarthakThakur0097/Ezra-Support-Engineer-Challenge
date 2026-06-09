@@ -1,7 +1,8 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
 
 namespace SupportEngineerChallenge.Tests;
 
@@ -22,6 +23,18 @@ public class TaskApiTests : IClassFixture<WebApplicationFactory<Program>>
         var req = new { userId = "user-001", title = "Test task" };
 
         client.DefaultRequestHeaders.Add("X-Client-Timestamp", DateTime.UtcNow.ToString("O"));
+
+        var res = await client.PostAsJsonAsync("/api/tasks", req);
+
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task CreateTask_ShouldReturn201_WhenTimestampHeaderMissing()
+    {
+        var client = _factory.CreateClient();
+
+        var req = new { userId = "user-001", title = "Test task" };
 
         var res = await client.PostAsJsonAsync("/api/tasks", req);
 
