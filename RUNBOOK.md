@@ -21,6 +21,7 @@ dotnet run
 dotnet test
 ```
 
+ Note: Requires `Microsoft.NET.Test.Sdk` in the test project's `.csproj`. If the testhost fails to load assemblies, verify this package is present.
 ## Key endpoints
 
 - `GET /api/tasks?userId={id}&limit={n}`

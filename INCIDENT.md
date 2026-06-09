@@ -26,6 +26,8 @@
 
 ## Root cause
 
+Initially considered the issue might be request body validation, but the structured log line showing X-Client-Timestamp present=False immediately before the stack trace ruled that out.
+
 - **500 errors:** `DateTime.Parse(clientTimestamp)` called unconditionally even when `X-Client-Timestamp` header was absent. The UI randomly omits the header ~35% of requests.
 - **Slow lists:** Full table scan loaded all users' tasks into memory before filtering in C#.
 - **Duplicates:** UI used `state.tasks.concat(items)` on every refresh instead of replacing the list.

@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
             b.Property(x => x.UserId).IsRequired();
             b.Property(x => x.Title).IsRequired();
             b.Property(x => x.Status).IsRequired();
+            b.HasIndex(x => x.UserId);  
         });
     }
 }
