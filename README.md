@@ -78,3 +78,48 @@ Please complete:
 
 - You can change anything in this repo (including UI) as long as you explain your choices.
 - If you get blocked by setup, write down what you tried and where you got stuck.
+
+
+
+---
+
+## Debug Findings & Analysis
+
+### What I Found and Fixed
+
+**1. Intermittent 500 on task creation**
+
+Started with the log artifact. The stack trace pointed straight to `DateTime.Parse` throwing on an empty string, and the line above it showed `X-Client-Timestamp present=False` — which made the cause pretty clear. The server was trying to parse the header unconditionally even when if it wasn't there.
+
+Digging into `main.js` revealed why it was intermittent — the UI was randomly omitting the header about 35% of the time via `Math.random()`.
+
+Fixed the server to use `DateTime.TryParse` with a fallback to `DateTime.UtcNow` so it handles both missing and malformed headers gracefully. Also fixed the UI to always send the header consistently.
+
+Added a new test `CreateTask_ShouldReturn201_WhenTimestampHeaderMissing` to cover this case going forward.
+
+---
+
+**2. Slow task list**
+
+The slow list log showed `elapsedMs=1847` for a request with `limit=200`. Looking at the code, the endpoint was calling `ToListAsync()` on the full tasks table and then filtering in C# — so every request was loading every user's tasks into memory regardless of who was asking.
+
+Moved the `Where()`, `OrderByDescending()`, and `Take()` into the database query before the `ToListAsync()` call. Response time dropped from ~1847ms to ~9ms and the SQL logs now show the WHERE and LIMIT clauses hitting the database directly.
+
+Also added a `UserId` index in `AppDbContext.cs` to keep this query fast as the dataset grows.
+
+---
+
+**3. Duplicate tasks on refresh**
+
+Reproduced this by clicking Refresh a few times and watching the task count grow. Checked the API response in browser dev tools first — the response itself was clean, so the bug was definitely in the UI.
+
+Traced it to `state.tasks.concat(items)` in `main.js` which was appending the fetched tasks onto the existing list every time instead of replacing it. One line fix — replaced concat with direct assignment.
+
+---
+
+### Tradeoffs
+
+- Kept all fixes minimal — no unnecessary refactoring beyond what was needed to resolve each issue
+- Chose `DateTime.TryParse` over a simple null check because it also handles malformed timestamps, not just missing ones
+- Fixed the UI header bug in addition to the server-side guard — the server fallback is a safety net but the client behavior was still wrong
+

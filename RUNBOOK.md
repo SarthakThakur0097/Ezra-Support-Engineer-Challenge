@@ -21,7 +21,8 @@ dotnet run
 dotnet test
 ```
 
- Note: Requires `Microsoft.NET.Test.Sdk` in the test project's `.csproj`. If the testhost fails to load assemblies, verify this package is present.
+Note: Requires `Microsoft.NET.Test.Sdk` in the test project's `.csproj`. If the testhost fails to load assemblies, verify this package is present.
+
 ## Key endpoints
 
 - `GET /api/tasks?userId={id}&limit={n}`
@@ -39,7 +40,7 @@ dotnet test
 1. Check API logs for `FormatException: String '' was not recognized as a valid DateTime`
 2. Look for `X-Client-Timestamp present=False` in the `CreateTask request` log line above the exception
 3. If present, the client is not sending the header — server must fall back to `DateTime.UtcNow`
-4. Verify fix: `var createdAt = hasTimestamp ? DateTime.Parse(clientTimestamp) : DateTime.UtcNow;`
+4. Verify fix: `var createdAt = DateTime.TryParse(clientTimestamp, out var parsedTimestamp) ? parsedTimestamp : DateTime.UtcNow;`
 5. Test by POSTing to `/api/tasks` without the `X-Client-Timestamp` header — should return 201
 
 ### "Tasks list is slow"

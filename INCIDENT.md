@@ -24,13 +24,41 @@
 - 01:00 — Fixes implemented and manually verified
 - 01:30 — Tests written and committed
 
-## Root cause
 
-Initially considered the issue might be request body validation, but the structured log line showing X-Client-Timestamp present=False immediately before the stack trace ruled that out.
+## Reproduction steps
+
+**500 on task creation:**
+1. Run the app locally with `dotnet run`
+2. Open the UI and click Add Task repeatedly
+3. ~35% of attempts return a 500 error
+4. Check logs — `X-Client-Timestamp present=False` appears before the FormatException
+
+**Slow task list:**
+1. Check `artifacts/sample_slow_list_log.txt`
+2. Note `elapsedMs=1847` for a request with `limit=200`
+3. Check EF Core SQL logs — no WHERE clause present, full table scan confirmed
+
+**Duplicate tasks:**
+1. Run the app and load the task list
+2. Click Refresh multiple times
+3. Tasks accumulate with each refresh
+4. Check API response in browser dev tools — response is clean, confirming the bug is in the UI
+
+## Root cause
 
 - **500 errors:** `DateTime.Parse(clientTimestamp)` called unconditionally even when `X-Client-Timestamp` header was absent. The UI randomly omits the header ~35% of requests.
 - **Slow lists:** Full table scan loaded all users' tasks into memory before filtering in C#.
+
 - **Duplicates:** UI used `state.tasks.concat(items)` on every refresh instead of replacing the list.
+
+- The duplicate tasks report was initially unclear — confirmed it was a UI issue and not an API issue by checking the API response directly in the browser dev tools, which showed no duplicates. This pointed to the UI state update logic in main.js where concat was accumulating tasks on every refresh.
+
+
+
+## What was considered / ruled out
+
+- Initially considered the 500 error might be a request body validation issue, but the structured log line showing `X-Client-Timestamp present=False` immediately before the stack trace ruled that out.
+- For the slow list, considered the issue might be dataset size or SQLite limitations, but the EF Core SQL logs confirmed no WHERE clause was present — the query was loading all users' tasks before filtering.
 
 ## Mitigation / resolution
 
